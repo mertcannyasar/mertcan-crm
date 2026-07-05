@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mertcan CRM Bulut</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{margin:0;font-family:Arial;background:#f3f5f7;color:#111827}
+header{background:linear-gradient(135deg,#082f49,#0f766e);color:white;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+h1{margin:0;font-size:24px}p{margin:5px 0}
+.wrap{padding:16px;max-width:1450px;margin:auto}
+.login{max-width:420px;margin:70px auto;background:white;padding:22px;border-radius:18px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
+input,select,textarea{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;box-sizing:border-box}
+textarea{min-height:75px;resize:vertical}
+button{border:0;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer}
+.primary{background:#111827;color:white}.danger{background:#fee2e2}.ok{background:#dcfce7}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tab{background:white;box-shadow:0 10px 25px rgba(0,0,0,.06)}.tab.active{background:#0f3d63;color:white}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:white;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,.06);overflow:hidden;margin-bottom:14px}
+.card h2{margin:0;color:white;padding:13px 15px;font-size:18px}
+.blue h2{background:#0f3d63}.green h2{background:#087f5b}.purple h2{background:#5b3f92}.orange h2{background:#d97706}.red h2{background:#b91c1c}
+.body{padding:14px}.form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.full{grid-column:1/-1}
+.item{border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin:8px 0;background:white}
+.itemTop{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.title{font-weight:800}.meta{color:#6b7280;font-size:12px;margin-top:4px;line-height:1.5}.note{font-size:13px;margin-top:8px;white-space:pre-wrap}
+.actions{display:flex;gap:5px;flex-shrink:0}.small{font-size:12px;padding:6px 8px}
+.completed{opacity:.55;text-decoration:line-through}.section{display:none}.section.active{display:block}.hidden{display:none!important}.muted{color:#6b7280;font-size:13px}
+.regionGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.region h3{margin:0;background:#0f3d63;color:white;padding:10px;border-radius:12px 12px 0 0;font-size:14px}
+.region .body{border:1px solid #e5e7eb;border-top:0;border-radius:0 0 12px 12px;min-height:210px}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}.regionGrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.form{grid-template-columns:1fr}.regionGrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="loginView" class="login">
+  <h1>Mertcan CRM</h1>
+  <p class="muted">Bulut kayıtlı emlak takip sistemi</p>
+  <div class="form" style="grid-template-columns:1fr">
+    <input id="email" type="email" placeholder="E-posta">
+    <input id="password" type="password" placeholder="Şifre">
+    <button class="primary" onclick="login()">Giriş Yap</button>
+    <button onclick="signup()">Kayıt Ol</button>
+    <p id="loginMsg" class="muted"></p>
+  </div>
+</div>
+
+<div id="appView" class="hidden">
+<header>
+  <div><h1>Mertcan CRM</h1><p>Takip • Portföy • Saha • Yatırımcı • Hatırlatma</p></div>
+  <div><span id="userEmail"></span> <button class="ok" onclick="loadAll()">Yenile</button> <button class="danger" onclick="logout()">Çıkış</button></div>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('dashboard',this)">Ana Sayfa</button>
+    <button class="tab" onclick="showTab('clients',this)">Müşteriler</button>
+    <button class="tab" onclick="showTab('field',this)">Saha Bölgeleri</button>
+    <button class="tab" onclick="showTab('investors',this)">Yatırımcılar</button>
+    <button class="tab" onclick="showTab('reminders',this)">Hatırlatmalar</button>
+  </div>
+
+  <section id="dashboard" class="section active">
+    <div class="grid">
+      <div class="card blue"><h2>Yapılacak İşler</h2><div class="body">
+        <div class="form"><input id="taskTitle" placeholder="İş adı"><input id="taskDate" type="date"><textarea id="taskNote" class="full" placeholder="Not"></textarea><button class="primary full" onclick="addTask()">İş Ekle</button></div><div id="tasksList"></div>
+      </div></div>
+      <div class="card green"><h2>Takip Edilecekler</h2><div class="body">
+        <div class="form"><input id="followTitle" placeholder="Kişi / konu"><input id="followDate" type="date"><select id="followStatus"><option>Aranacak</option><option>Görüşüldü</option><option>Teklif Bekliyor</option><option>Evrak Bekliyor</option></select><input id="followPhone" placeholder="Telefon"><textarea id="followNote" class="full" placeholder="Takip notu"></textarea><button class="primary full" onclick="addFollowup()">Takip Ekle</button></div><div id="followupsList"></div>
+      </div></div>
+      <div class="card purple"><h2>Portföyler</h2><div class="body">
+        <div class="form"><input id="portTitle" placeholder="Portföy adı"><input id="portLocation" placeholder="Lokasyon"><input id="portType" placeholder="Tip"><input id="portPrice" type="number" placeholder="Fiyat"><input id="portOwner" placeholder="Mal sahibi"><select id="portStatus"><option>Aktif</option><option>İlan Girilecek</option><option>Fiyat Çalışılacak</option><option>Teklif Aşamasında</option><option>Satıldı/Kiralandı</option></select><textarea id="portNote" class="full" placeholder="Portföy notu"></textarea><button class="primary full" onclick="addPortfolio()">Portföy Ekle</button></div><div id="portfoliosList"></div>
+      </div></div>
+    </div>
+  </section>
+
+  <section id="clients" class="section"><div class="card orange"><h2>Müşteri / Mal Sahibi Notları</h2><div class="body">
+    <div class="form"><input id="contactName" placeholder="Ad Soyad"><input id="contactPhone" placeholder="Telefon"><input id="contactEmail" placeholder="E-posta"><input id="contactNeed" placeholder="Aradığı / sattığı"><textarea id="contactNotes" class="full" placeholder="Detaylı not"></textarea><button class="primary full" onclick="addContact()">Müşteri Ekle</button></div><div id="contactsList"></div>
+  </div></div></section>
+
+  <section id="field" class="section">
+    <div class="form"><select id="fieldRegion"><option>Feneryolu</option><option>Ziverbey</option><option>Erenköy</option><option>Cadde</option><option>Fenerbahçe</option><option>Diğer</option></select><input id="fieldName" placeholder="Uğranacak kişi / işletme"><input id="fieldPhone" placeholder="Telefon"><input id="fieldLast" type="date"><textarea id="fieldNote" class="full" placeholder="Saha notu"></textarea><button class="primary full" onclick="addFieldContact()">Saha Listesine Ekle</button></div>
+    <div id="fieldList" class="regionGrid"></div>
+  </section>
+
+  <section id="investors" class="section"><div class="card green"><h2>Yatırımcılar</h2><div class="body">
+    <div class="form"><input id="invName" placeholder="Yatırımcı adı"><input id="invPhone" placeholder="Telefon"><input id="invBudget" placeholder="Bütçe"><input id="invArea" placeholder="İlgilendiği bölge"><select id="invType"><option>Konut</option><option>Dükkan</option><option>Arsa</option><option>Sanayi</option><option>Yurt dışı</option></select><select id="invTemp"><option>Sıcak</option><option>Ilık</option><option>Soğuk</option></select><textarea id="invNote" class="full" placeholder="Yatırım kriterleri"></textarea><button class="primary full" onclick="addInvestor()">Yatırımcı Ekle</button></div><div id="investorsList"></div>
+  </div></div></section>
+
+  <section id="reminders" class="section"><div class="card red"><h2>Hatırlatmalar / Önemli Şeyler</h2><div class="body">
+    <div class="form"><input id="remTitle" placeholder="Hatırlatma"><input id="remDate" type="date"><select id="remPriority"><option>Normal</option><option>Önemli</option><option>Acil</option></select><input id="remRelated" placeholder="Bağlantılı kişi / portföy"><textarea id="remNote" class="full" placeholder="Detay"></textarea><button class="primary full" onclick="addReminder()">Hatırlatma Ekle</button></div><div id="remindersList"></div>
+  </div></div></section>
+</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://mldpiqzwczhwgpepynsn.supabase.co";
+const SUPABASE_KEY = "sb_publishable_Knfmhk5qw_9bCtWHymlWgg_KBUCypW-";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let state = {tasks:[],contacts:[],portfolios:[],followups:[],field_contacts:[],investors:[],reminders:[]};
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
+async function currentUser(){const {data}=await sb.auth.getUser();return data.user;}
+async function login(){loginMsg.textContent="Giriş yapılıyor...";const {error}=await sb.auth.signInWithPassword({email:email.value.trim(),password:password.value});if(error){loginMsg.textContent="Hata: "+error.message;return;}await boot();}
+async function signup(){loginMsg.textContent="Kayıt oluşturuluyor...";const {error}=await sb.auth.signUp({email:email.value.trim(),password:password.value});if(error){loginMsg.textContent="Hata: "+error.message;return;}loginMsg.textContent="Kayıt oluşturuldu. Şimdi giriş yap.";}
+async function logout(){await sb.auth.signOut();location.reload();}
+async function boot(){const user=await currentUser();if(!user){loginView.classList.remove("hidden");appView.classList.add("hidden");return;}userEmail.textContent=user.email;loginView.classList.add("hidden");appView.classList.remove("hidden");await loadAll();}
+function showTab(id,btn){document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));document.getElementById(id).classList.add("active");btn.classList.add("active");}
+async function selectTable(table){const {data,error}=await sb.from(table).select("*").order("created_at",{ascending:false});if(error){alert(table+" okunamadı: "+error.message);return [];}return data||[];}
+async function loadAll(){for(const t of Object.keys(state)) state[t]=await selectTable(t);render();}
+async function insert(table,payload){const {error}=await sb.from(table).insert(payload);if(error)return alert("Kayıt hatası: "+error.message);await loadAll();}
+async function removeRow(table,id){if(!confirm("Silinsin mi?"))return;const {error}=await sb.from(table).delete().eq("id",id);if(error)return alert("Silme hatası: "+error.message);await loadAll();}
+async function toggleComplete(table,row){const {error}=await sb.from(table).update({completed:!row.completed}).eq("id",row.id);if(error)return alert("Güncelleme hatası: "+error.message);await loadAll();}
+async function quickEdit(table,row,field){const val=prompt("Düzenle:",row[field]||"");if(val===null)return;let p={};p[field]=val;const {error}=await sb.from(table).update(p).eq("id",row.id);if(error)return alert("Düzenleme hatası: "+error.message);await loadAll();}
+function item(row,table,titleField,metaFields,noteField){const title=row[titleField]||row.name||row.title||"";const meta=metaFields.map(x=>row[x[1]]?x[0]+": "+row[x[1]]:"").filter(Boolean).join(" • ");const note=row[noteField]||row.note||row.notes||"";return `<div class="item ${row.completed?"completed":""}"><div class="itemTop"><div><div class="title">${esc(title)}</div><div class="meta">${esc(meta)}</div></div><div class="actions">${("completed" in row)?`<button class="small ok" onclick='toggleComplete("${table}",${JSON.stringify(row)})'>✓</button>`:""}<button class="small" onclick='quickEdit("${table}",${JSON.stringify(row)},"${titleField}")'>Düzenle</button><button class="small danger" onclick='removeRow("${table}",${row.id})'>Sil</button></div></div>${note?`<div class="note">${esc(note)}</div>`:""}</div>`;}
+function render(){tasksList.innerHTML=state.tasks.map(r=>item(r,"tasks","title",[["Tarih","due_date"]],"note")).join("");contactsList.innerHTML=state.contacts.map(r=>item(r,"contacts","name",[["Telefon","phone"],["E-posta","email"],["İhtiyaç","need"]],"notes")).join("");portfoliosList.innerHTML=state.portfolios.map(r=>item(r,"portfolios","title",[["Lokasyon","location"],["Tip","property_type"],["Fiyat","price"],["Mal sahibi","owner_name"],["Durum","status"]],"notes")).join("");followupsList.innerHTML=state.followups.map(r=>item(r,"followups","title",[["Tarih","follow_date"],["Telefon","phone"],["Durum","status"]],"notes")).join("");investorsList.innerHTML=state.investors.map(r=>item(r,"investors","name",[["Telefon","phone"],["Bütçe","budget"],["Bölge","area"],["Tip","investment_type"],["Seviye","temperature"]],"notes")).join("");remindersList.innerHTML=state.reminders.map(r=>item(r,"reminders","title",[["Tarih","remind_date"],["Öncelik","priority"],["Bağlantı","related"]],"notes")).join("");const regs=["Feneryolu","Ziverbey","Erenköy","Cadde","Fenerbahçe","Diğer"];fieldList.innerHTML=regs.map(region=>{const rows=state.field_contacts.filter(r=>r.region===region);return `<div class="region"><h3>${region}</h3><div class="body">${rows.map(r=>item(r,"field_contacts","name",[["Telefon","phone"],["Son ziyaret","last_visit"]],"notes")).join("")}</div></div>`}).join("");}
+function clearInputs(ids){ids.forEach(id=>document.getElementById(id).value="");}
+function addTask(){if(!taskTitle.value.trim())return alert("İş adı gir.");insert("tasks",{title:taskTitle.value.trim(),due_date:taskDate.value||null,note:taskNote.value,completed:false});clearInputs(["taskTitle","taskDate","taskNote"]);}
+function addContact(){if(!contactName.value.trim())return alert("Ad gir.");insert("contacts",{name:contactName.value.trim(),phone:contactPhone.value,email:contactEmail.value,need:contactNeed.value,notes:contactNotes.value});clearInputs(["contactName","contactPhone","contactEmail","contactNeed","contactNotes"]);}
+function addPortfolio(){if(!portTitle.value.trim())return alert("Portföy adı gir.");insert("portfolios",{title:portTitle.value.trim(),location:portLocation.value,property_type:portType.value,price:portPrice.value||null,owner_name:portOwner.value,status:portStatus.value,notes:portNote.value,completed:false});clearInputs(["portTitle","portLocation","portType","portPrice","portOwner","portNote"]);}
+function addFollowup(){if(!followTitle.value.trim())return alert("Takip adı gir.");insert("followups",{title:followTitle.value.trim(),follow_date:followDate.value||null,phone:followPhone.value,status:followStatus.value,notes:followNote.value,completed:false});clearInputs(["followTitle","followDate","followPhone","followNote"]);}
+function addFieldContact(){if(!fieldName.value.trim())return alert("Kişi/işletme gir.");insert("field_contacts",{region:fieldRegion.value,name:fieldName.value.trim(),phone:fieldPhone.value,last_visit:fieldLast.value||null,notes:fieldNote.value,completed:false});clearInputs(["fieldName","fieldPhone","fieldLast","fieldNote"]);}
+function addInvestor(){if(!invName.value.trim())return alert("Yatırımcı adı gir.");insert("investors",{name:invName.value.trim(),phone:invPhone.value,budget:invBudget.value,area:invArea.value,investment_type:invType.value,temperature:invTemp.value,notes:invNote.value,completed:false});clearInputs(["invName","invPhone","invBudget","invArea","invNote"]);}
+function addReminder(){if(!remTitle.value.trim())return alert("Hatırlatma gir.");insert("reminders",{title:remTitle.value.trim(),remind_date:remDate.value||null,priority:remPriority.value,related:remRelated.value,notes:remNote.value,completed:false});clearInputs(["remTitle","remDate","remRelated","remNote"]);}
+boot();
+</script>
+</body>
+</html>
